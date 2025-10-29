@@ -3,7 +3,7 @@ nom="snowboard"
 stock=10
 print(nom)
 print(prix)
-print(f"{stock} en stock")
+print(f"{stock} produit en stock.")
 achat=int(input(f"Combien de {nom} souhaitez-vous achetez?"))
 if achat>=stock:
     print("Stock insuffisant.")
