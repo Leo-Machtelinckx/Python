@@ -9,6 +9,8 @@ if a+c>b and a+b>c and b+c>a:
         print("Le triangle est isocèle.")
     if a==b==c:
         print("Le triangle est équilatérale.")
+    else:
+        print("Le triangle est quelconque.")
 else:
-    print("Le triangle est quelconque.")
+    print("Le triangle est impossible.")
     
