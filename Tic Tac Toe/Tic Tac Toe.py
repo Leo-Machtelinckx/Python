@@ -1,4 +1,4 @@
-from tkinter import Tk, Button, Label, Frame,messagebox
+from tkinter import Tk, Button, Label, Frame, messagebox, Menu
 import random
 
 class Window(Tk):
@@ -38,92 +38,235 @@ class Window(Tk):
 
         #Window Title
         self.title("Tic Tac Toe")
-        self.compteur=0
+
+        #Turn Count
+        self.compteur = 0
+
+        # Game Mode
+        self.mode = "solo"
+
+        self.game_over = False
+
+        # Menu
+        menubar = Menu(self)
+        mode_menu = Menu(menubar, tearoff=0)
+        mode_menu.add_command(label="Solo (contre IA)", command=self.set_mode_solo)
+        mode_menu.add_command(label="Multijoueur (2 joueurs)", command=self.set_mode_multi)
+        menubar.add_cascade(label="Mode de jeu", menu=mode_menu)
+
+        self.config(menu=menubar)
         
+    def reset_board(self):
+        for r in range(3):
+            for c in range(3):
+                self.button[r][c].config(text="", state="normal")
+        self.compteur = 0
+        self.game_over = False
+
+    def set_mode_solo(self):
+        self.mode = "solo"
+        self.reset_board()
+        messagebox.showinfo("Mode de jeu", "Mode solo (contre IA) activé.")
+
+    def set_mode_multi(self):
+        self.mode = "multi"
+        self.reset_board()
+        messagebox.showinfo("Mode de jeu", "Mode multijoueur activé.")
+
     def button_click(self, row, col):
+        if self.game_over:
+            return
+
         bouton = self.button[row][col]
-        if bouton["text"].strip() == "" and self.compteur==0:
-            symbole="X"
+
+        if bouton["text"].strip() != "":
+            return
+
+        # Mode Solo
+        if self.mode == "solo":
+            symbole = "X"
             bouton.config(text="X")
-            self.compteur=1
 
-        if bouton["text"].strip() == "" and self.compteur==1:
-            symbole="O"
-            bouton.config(text="O")
-            self.compteur=0
+            # Victory message
+            if self.check_win(symbole):
+                messagebox.showinfo("Victoire!", f"Les {symbole} ont gagné")
+                self.disable_buttons()
+                self.game_over = True
+                return
 
-        if self.check_win(symbole) == True:
-            messagebox.showinfo("Victoire!",("Les",symbole,"ont gagné"))
-            self.disable_buttons()
-        if self.check_win(symbole) == False:
-            messagebox.showinfo("Match nul","Match Nul!")
-            self.disable_buttons()
-            
+            # Nul Message
+            if self.check_board_full():
+                messagebox.showinfo("Match nul", "Match Nul!")
+                self.disable_buttons()
+                self.game_over = True
+                return
+
+            self.IA()
+            return
+
+        # Mode Multiplayer
+        if self.mode == "multi":
+            if self.compteur == 0:
+                symbole = "X"
+                bouton.config(text="X")
+                self.compteur = 1
+            else:
+                symbole = "O"
+                bouton.config(text="O")
+                self.compteur = 0
+
+            if self.check_win(symbole):
+                messagebox.showinfo("Victoire!", f"Les {symbole} ont gagné")
+                self.disable_buttons()
+                self.game_over = True
+                return
+
+            if self.check_board_full():
+                messagebox.showinfo("Match nul", "Match Nul!")
+                self.disable_buttons()
+                self.game_over = True
+                return
+
     def check_board_full(self):
         for r in range(3):
             for c in range(3):
-                if self.button[r][c]["text"].strip()== "":
+                if self.button[r][c]["text"].strip() == "":
                     return False
         return True
     
-    def check_win(self,symbole):
+    def check_win(self, symbole):
         b = self.button
 
+        # Lignes
         for r in range(3):
-            if (b[r][0]["text"]==symbole and
-                b[r][1]["text"]==symbole and
-                b[r][2]["text"]==symbole):
+            if (b[r][0]["text"] == symbole and
+                b[r][1]["text"] == symbole and
+                b[r][2]["text"] == symbole):
                 return True
             
+        # Colonnes
         for c in range(3):
-            if (b[0][c]["text"]==symbole and
-                b[1][c]["text"]==symbole and
-                b[2][c]["text"]==symbole):
+            if (b[0][c]["text"] == symbole and
+                b[1][c]["text"] == symbole and
+                b[2][c]["text"] == symbole):
                 return True
             
-        if (b[0][0]["text"]==symbole and
-            b[1][1]["text"]==symbole and
-            b[2][2]["text"]==symbole):
+        # Diagonale principale
+        if (b[0][0]["text"] == symbole and
+            b[1][1]["text"] == symbole and
+            b[2][2]["text"] == symbole):
             return True
 
-        if (b[0][2]["text"]==symbole and
-            b[1][1]["text"]==symbole and
-            b[2][0]["text"]==symbole):
+        # Diagonale secondaire
+        if (b[0][2]["text"] == symbole and
+            b[1][1]["text"] == symbole and
+            b[2][0]["text"] == symbole):
             return True
-        
-        elif self.check_board_full() == True:
-            return False
+
+        return False
   
     def disable_buttons(self):
         for r in range(3):
             for c in range(3):
                 self.button[r][c]["state"] = "disabled"
-    
-    def valid_move(self):
-        if self.compteur == 1:
-            valid_move=[]
-            for row in range(3):
-                for col in range(3):
-                    if self.button[row][col] == "":
-                        valid_move.append(row,col)
-        return valid_move
-    
-    def move_played_X(self):
-        if self.compteur == 1:
-            move_played_X=[]
-            for row in range(3):
-                for col in range(3):
-                    if self.button[row][col] == "X":
-                        move_played_X.append(row,col)
-        return move_played_X
-    
+
+    # --- Utilitaires IA ---
+
+    def get_board(self):
+        board = []
+        for r in range(3):
+            row = []
+            for c in range(3):
+                row.append(self.button[r][c]["text"].strip())
+            board.append(row)
+        return board
+
+    def gagne_board(self, board, symbole):
+        # Lignes
+        for r in range(3):
+            if board[r][0] == board[r][1] == board[r][2] == symbole:
+                return True
+        # Colonnes
+        for c in range(3):
+            if board[0][c] == board[1][c] == board[2][c] == symbole:
+                return True
+        # Diagonales
+        if board[0][0] == board[1][1] == board[2][2] == symbole:
+            return True
+        if board[0][2] == board[1][1] == board[2][0] == symbole:
+            return True
+        return False
+
+    def ia_choisir_coup(self, ia="O", joueur="X"):
+        board = self.get_board()
+
+        # Liste des cases vides
+        vides = [(r, c) for r in range(3) for c in range(3) if board[r][c] == ""]
+
+        if not vides:
+            return None
+
+        # 1) L'IA peut-elle gagner tout de suite ?
+        for r, c in vides:
+            board[r][c] = ia
+            if self.gagne_board(board, ia):
+                board[r][c] = ""
+                return (r, c)
+            board[r][c] = ""
+
+        # 2) Le joueur peut-il gagner au prochain coup ? -> on bloque
+        for r, c in vides:
+            board[r][c] = joueur
+            if self.gagne_board(board, joueur):
+                board[r][c] = ""
+                return (r, c)
+            board[r][c] = ""
+
+        # 3) Prendre le centre si dispo
+        if (1, 1) in vides:
+            return (1, 1)
+
+        # 4) Prendre un coin si dispo
+        coins = [(0,0), (0,2), (2,0), (2,2)]
+        coups_coins = [pos for pos in coins if pos in vides]
+        if coups_coins:
+            return random.choice(coups_coins)
+
+        # 5) Sinon, un mouvement aléatoire
+        return random.choice(vides)
+
     def IA(self):
-        if self.compteur == 1:
-            move = self.valid_move()
-            row,col = random.choices(move)
-            bouton = self.button[row][col]
-            bouton.config(text="O")
-            self.compteur=0
+        # IA n'agit que si on est en mode solo et que la partie n'est pas finie
+        if self.mode != "solo" or self.game_over:
+            return
+
+        coup = self.ia_choisir_coup(ia="O", joueur="X")
+        if coup is None:
+            return
+
+        row, col = coup
+        bouton = self.button[row][col]
+
+        # Sécurité : si la case est déjà prise (ne devrait pas arriver)
+        if bouton["text"].strip() != "":
+            return
+
+        bouton.config(text="O")
+
+        # Vérifier si l'IA gagne
+        if self.check_win("O"):
+            messagebox.showinfo("Victoire!", "Les O ont gagné")
+            self.disable_buttons()
+            self.game_over = True
+            return
+
+        # Vérifier match nul après le coup de l'IA
+        if self.check_board_full():
+            messagebox.showinfo("Match nul", "Match Nul!")
+            self.disable_buttons()
+            self.game_over = True
+            return
+            
 
 window = Window()
 window.mainloop()
